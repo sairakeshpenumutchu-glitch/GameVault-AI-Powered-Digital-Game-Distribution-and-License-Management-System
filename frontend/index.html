@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAMEVAULT | Digital Game Store & License Management</title>
+  <link rel="stylesheet" href="styles.css?v=11">
+</head>
+<body>
+
+  <!-- Top Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-left">
+      <div class="brand" onclick="switchView('store')">
+        <svg class="brand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+        <span>GAMEVAULT</span>
+      </div>
+
+      <nav class="nav-links">
+        <button class="nav-btn active" id="nav-store" onclick="switchView('store')">Store</button>
+        <button class="nav-btn" id="nav-library" onclick="switchView('library')">
+          Library <span class="nav-badge" id="library-count-badge">0</span>
+        </button>
+        <button class="nav-btn" id="nav-marketplace" onclick="switchView('marketplace')">
+          P2P Market <span class="nav-badge" id="marketplace-count-badge">0</span>
+        </button>
+        <button class="nav-btn" id="nav-database" onclick="switchView('database')">
+          Database Console
+        </button>
+      </nav>
+    </div>
+
+    <div class="nav-right">
+      <div class="user-pill">
+        <div class="user-avatar-wrap">
+          <img id="user-avatar" class="user-avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80" alt="Avatar">
+          <span class="user-avatar-dot" title="Online"></span>
+        </div>
+        <div class="user-info">
+          <select id="user-switcher" class="user-select-dropdown" onchange="changeActiveUser(this.value)">
+            <!-- Populated via JS -->
+          </select>
+          <span class="wallet-badge" id="user-wallet">$250.00</span>
+        </div>
+      </div>
+      <button class="topup-btn" onclick="topUpWallet()">+ Add $50</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+
+    <!-- 1. STORE VIEW -->
+    <section id="view-store" class="view-section active">
+      <div class="store-header">
+        <div>
+          <h1 class="store-title">Featured Titles</h1>
+          <p class="store-subtitle">Browse primary digital licenses, base games, and expansion packs</p>
+        </div>
+        <input type="text" id="store-search" class="search-input" placeholder="Search catalog..." oninput="filterGames()">
+      </div>
+
+      <div class="games-grid" id="games-grid-container">
+        <!-- Rendered dynamically via JS -->
+      </div>
+    </section>
+
+    <!-- 2. LIBRARY VIEW (With Multi-Device Selector) -->
+    <section id="view-library" class="view-section">
+      <div class="store-header">
+        <div>
+          <h1 class="store-title">User Library</h1>
+          <p class="store-subtitle">Active entitlements, allocated digital keys, and play sessions</p>
+        </div>
+        <div class="device-selector-wrap">
+          <label for="device-node-select" class="device-label">Current Device Node:</label>
+          <select id="device-node-select" class="device-select" onchange="onDeviceChange()">
+            <option value="Desktop-PC-Rig">🖥️ Desktop-PC-Rig</option>
+            <option value="Laptop-Travel-02">💻 Laptop-Travel-02</option>
+            <option value="SteamDeck-Mobile">🎮 SteamDeck-Mobile</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="library-grid" id="library-grid-container">
+        <!-- Rendered dynamically via JS -->
+      </div>
+    </section>
+
+    <!-- 3. P2P MARKETPLACE VIEW -->
+    <section id="view-marketplace" class="view-section">
+      <div class="store-header">
+        <div>
+          <h1 class="store-title">P2P Secondary Resale Marketplace</h1>
+          <p class="store-subtitle">Buy and sell verified used game licenses. Automated 80% seller payout + 20% publisher royalty.</p>
+        </div>
+      </div>
+
+      <div class="marketplace-grid" id="marketplace-grid-container">
+        <!-- Rendered dynamically via JS -->
+      </div>
+    </section>
+
+    <!-- 4. DATABASE CONSOLE VIEW (Live Database Inspector) -->
+    <section id="view-database" class="view-section">
+      <div class="db-header">
+        <h1 class="store-title">Live Database Inspector</h1>
+        <p class="store-subtitle">Real-time relational engine state, key locks, transactions, and entitlements</p>
+      </div>
+
+      <!-- Stats Bar -->
+      <div class="db-stats-bar" id="db-stats-bar">
+        <div class="db-stat-card">
+          <div class="db-stat-label">Catalog Games</div>
+          <div class="db-stat-value" id="stat-total-games">-</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-label">Available Keys</div>
+          <div class="db-stat-value highlight-green" id="stat-available-keys">-</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-label">Assigned Keys</div>
+          <div class="db-stat-value highlight-blue" id="stat-assigned-keys">-</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-label">Owned Licenses</div>
+          <div class="db-stat-value" id="stat-owned-licenses">-</div>
+        </div>
+        <div class="db-stat-card">
+          <div class="db-stat-label">Ledger Transactions</div>
+          <div class="db-stat-value" id="stat-total-tx">-</div>
+        </div>
+      </div>
+
+      <!-- Table Selection Tabs -->
+      <div class="db-tables-nav">
+        <button class="db-table-btn active" onclick="loadTable('license_keys', this)">license_keys</button>
+        <button class="db-table-btn" onclick="loadTable('games', this)">games</button>
+        <button class="db-table-btn" onclick="loadTable('user_library', this)">user_library</button>
+        <button class="db-table-btn" onclick="loadTable('user_dlc_library', this)">user_dlc_library</button>
+        <button class="db-table-btn" onclick="loadTable('game_dlcs', this)">game_dlcs</button>
+        <button class="db-table-btn" onclick="loadTable('p2p_marketplace_listings', this)">p2p_marketplace_listings</button>
+        <button class="db-table-btn" onclick="loadTable('users', this)">users</button>
+        <button class="db-table-btn" onclick="loadTable('transaction_ledger', this)">transaction_ledger</button>
+        <button class="db-table-btn" onclick="loadTable('refund_requests', this)">refund_requests</button>
+        <button class="db-table-btn" onclick="loadTable('publishers', this)">publishers</button>
+        <button class="db-table-btn" onclick="loadTable('active_drm_leases', this)">active_drm_leases</button>
+      </div>
+
+      <!-- Live Search & Filter Bar inside DB Console -->
+      <div class="db-table-toolbar">
+        <div class="db-toolbar-left">
+          <span class="db-table-badge" id="db-current-table-title">TABLE: license_keys</span>
+          <span class="db-rows-count" id="db-table-rows-count">48 rows</span>
+        </div>
+        <div class="db-toolbar-right">
+          <input type="text" id="db-search-input" class="db-search-input" placeholder="🔍 Search Game ID, Key, DLC ID, User ID..." oninput="filterCurrentTable()">
+          <button class="db-refresh-btn" onclick="refreshCurrentTable()">↻ Refresh</button>
+          <button class="db-reset-btn" onclick="resetDatabaseConfirm()">⚠️ Reset DB</button>
+        </div>
+      </div>
+
+      <!-- Live Data Table -->
+      <div class="db-table-container">
+        <table class="db-data-table" id="db-active-table">
+          <thead>
+            <tr id="db-table-header"></tr>
+          </thead>
+          <tbody id="db-table-body">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading table data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Interactive Raw Query Console -->
+      <div class="sql-console">
+        <div class="sql-console-title">Interactive SQL Query Console</div>
+        <form class="sql-form" onsubmit="runCustomSql(event)">
+          <input type="text" id="custom-sql-input" class="sql-input" placeholder="SELECT * FROM license_keys WHERE status = 'ASSIGNED';" value="SELECT key_id, game_id, edition_id, license_code, status, assigned_user_id FROM license_keys WHERE status = 'ASSIGNED';">
+          <button type="submit" class="btn-sql-run">Execute</button>
+        </form>
+        <div class="db-table-container" style="margin-bottom: 0;">
+          <table class="db-data-table" id="sql-result-table">
+            <thead><tr id="sql-header"></tr></thead>
+            <tbody id="sql-body"><tr><td style="color: var(--text-dim);">Execute query to inspect custom projections...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Game Details & Edition Selector Modal -->
+  <div class="modal-overlay" id="game-modal-overlay" onclick="closeModalOnBackdrop(event)">
+    <div class="modal-container" id="game-modal-container">
+      <button class="modal-close-btn" onclick="closeGameModal()">&times;</button>
+      
+      <div class="modal-hero">
+        <img id="modal-hero-img" class="modal-hero-img" src="" alt="Hero">
+        <div class="modal-hero-content">
+          <h2 id="modal-title" class="modal-hero-title">Game Title</h2>
+          <div class="modal-meta-row">
+            <span id="modal-genre">Genre</span>
+            <span>•</span>
+            <span id="modal-developer">Developer</span>
+            <span>•</span>
+            <span id="modal-publisher">Publisher</span>
+            <span>•</span>
+            <span id="modal-release">Release Date</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-body">
+        <p id="modal-desc" class="modal-description"></p>
+
+        <!-- Base Game Purchase Section -->
+        <div class="section-label">Base Game License</div>
+        <div id="modal-base-game-container">
+          <!-- Rendered dynamically via JS -->
+        </div>
+
+        <!-- DLCs & Expansions Section with Select All Toggle & AI Smart Bundle Optimizer -->
+        <div class="dlc-header-row">
+          <div class="section-label" style="margin-bottom: 0;">Add-on Content & DLCs</div>
+          <div class="dlc-header-actions">
+            <button type="button" class="btn-ai-bundle-opt" id="btn-ai-optimize-bundle" onclick="openAiBundleOptimizer()">
+              ✨ AI Optimize My Bundle
+            </button>
+            <button type="button" class="btn-select-all-dlcs" id="btn-toggle-all-dlcs" onclick="toggleSelectAllDlcs()">
+              Select All DLCs
+            </button>
+          </div>
+        </div>
+
+        <!-- AI Smart Cart Optimizer Banner -->
+        <div class="ai-bundle-panel" id="ai-bundle-panel" style="display: none;">
+          <div class="ai-bundle-panel-header">
+            <div class="ai-bundle-brand">
+              <span class="ai-sparkle-icon">✨</span>
+              <span class="ai-bundle-title">AI Smart Cart Optimizer</span>
+            </div>
+            <button type="button" class="btn-close-ai-bundle" onclick="toggleAiBundlePanel(false)">&times;</button>
+          </div>
+
+          <div class="ai-bundle-tabs" id="ai-bundle-tabs">
+            <button type="button" class="ai-bundle-tab active" id="tab-strat-story" onclick="switchAiBundleStrategy('story')">
+              🎯 Story & Expansions
+            </button>
+            <button type="button" class="ai-bundle-tab" id="tab-strat-complete" onclick="switchAiBundleStrategy('complete')">
+              👑 Complete Collector
+            </button>
+            <button type="button" class="ai-bundle-tab" id="tab-strat-budget" onclick="switchAiBundleStrategy('budget')">
+              💰 Budget Pick
+            </button>
+          </div>
+
+          <div class="ai-bundle-recommendation-box">
+            <div class="ai-bundle-rec-header">
+              <span class="ai-bundle-headline" id="ai-bundle-headline">Base Game + 1 Story Expansion</span>
+              <div class="ai-bundle-price-wrap">
+                <span class="ai-bundle-savings" id="ai-bundle-savings">Saves $24.98</span>
+                <span class="ai-bundle-price" id="ai-bundle-price">$89.98</span>
+              </div>
+            </div>
+            <p class="ai-bundle-reasoning" id="ai-bundle-reasoning">
+              Analyzing expansion packs and value-per-dollar ratio...
+            </p>
+            <div class="ai-bundle-action-row">
+              <button type="button" class="btn-apply-bundle-rec" onclick="applyCurrentAiBundleStrategy()">
+                ⚡ Apply AI Selection to Cart
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="dlcs-list" id="modal-dlcs-container">
+          <!-- Rendered dynamically via JS -->
+        </div>
+
+        <!-- Checkout Summary Footer -->
+        <div class="checkout-summary-bar">
+          <div class="checkout-summary-info">
+            <span class="checkout-summary-label">Order Total:</span>
+            <span class="checkout-summary-price" id="checkout-total-price">$0.00</span>
+            <span class="checkout-summary-items" id="checkout-items-count">(0 items)</span>
+          </div>
+          <button class="btn-buy" id="btn-confirm-checkout" onclick="executeCheckout()">
+            Complete Purchase
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- P2P Resale Listing Modal -->
+  <div class="modal-overlay" id="sell-modal-overlay" onclick="closeSellModalOnBackdrop(event)">
+    <div class="modal-container modal-small" id="sell-modal-container">
+      <button class="modal-close-btn" onclick="closeSellModal()">&times;</button>
+      
+      <div class="modal-header-simple">
+        <h2 class="modal-title-simple">List Game on P2P Marketplace</h2>
+        <p class="modal-subtitle-simple">Transfer your verified digital license key and DLCs to another user.</p>
+      </div>
+
+      <div class="modal-body-simple">
+        <div class="sell-game-info">
+          <div class="sell-game-title" id="sell-modal-game-title">Cyberpunk 2077</div>
+          <div class="sell-game-retail" id="sell-modal-retail-price">Original Retail: $59.99</div>
+        </div>
+
+        <!-- AI Pricing Intelligence Card (Dynamic Scarcity Suggestion) -->
+        <div class="ai-pricing-card" id="ai-pricing-card">
+          <div class="ai-card-header">
+            <div class="ai-title-wrap">
+              <span class="ai-sparkle-icon">✨</span>
+              <span class="ai-card-title">AI Dynamic Resale Intelligence</span>
+            </div>
+            <span class="ai-scarcity-pill" id="ai-modal-scarcity-pill">Analyzing Scarcity...</span>
+          </div>
+          
+          <div class="ai-suggestion-body">
+            <div class="ai-valuation-header-row">
+              <div class="ai-price-left">
+                <span class="ai-suggestion-label">🤖 Fair Market Appraisal:</span>
+                <span class="ai-suggested-val" id="ai-modal-suggested-price">$0.00</span>
+              </div>
+              <span class="ai-confidence-tag" id="ai-modal-confidence">94% Confidence</span>
+            </div>
+
+            <!-- Smart Liquidity Presets (1-Click) -->
+            <div class="ai-presets-container">
+              <div class="ai-preset-card fast" onclick="applyAiLiquidityPreset('fast')">
+                <div class="ai-preset-head">
+                  <span class="ai-preset-title">⚡ Fast Sale</span>
+                  <span class="ai-preset-amount" id="ai-preset-fast-price">$0.00</span>
+                </div>
+                <div class="ai-preset-meta">95% chance to sell in 1h</div>
+                <button type="button" class="btn-preset-mini">Apply Fast Sale</button>
+              </div>
+
+              <div class="ai-preset-card profit" onclick="applyAiLiquidityPreset('profit')">
+                <div class="ai-preset-head">
+                  <span class="ai-preset-title">💰 Max Profit</span>
+                  <span class="ai-preset-amount" id="ai-preset-profit-price">$0.00</span>
+                </div>
+                <div class="ai-preset-meta">40% chance of instant sale</div>
+                <button type="button" class="btn-preset-mini">Apply Max Profit</button>
+              </div>
+            </div>
+
+            <p class="ai-reasoning-text" id="ai-modal-reasoning">
+              Analyzing store inventory scarcity and secondary market equilibrium...
+            </p>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label-row">
+            <label class="form-label" for="sell-price-input" style="margin-bottom: 0;">Your Asking Price ($ USD):</label>
+            <span class="non-binding-notice">Non-binding • Customize freely</span>
+          </div>
+          <input type="number" id="sell-price-input" class="form-input" min="1" step="0.50" placeholder="29.99" oninput="onSellPriceInputChanged()">
+          
+          <!-- Live AI Deal Score & Liquidity Forecast on User's Custom Price -->
+          <div class="ai-live-feedback" id="ai-live-feedback">
+            <span class="ai-feedback-badge optimal" id="ai-feedback-badge">✨ Optimal Fair Value</span>
+            <div class="ai-feedback-content">
+              <div class="ai-feedback-deal-score" id="ai-feedback-deal-score">🔥 AI Deal Rating: 8.6/10</div>
+              <div class="ai-feedback-text" id="ai-feedback-text">Aligned with live store stock.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p2p-split-card">
+          <div class="split-row">
+            <span>Seller Net Payout (80%):</span>
+            <span class="highlight-green" id="sell-modal-seller-payout">$0.00</span>
+          </div>
+          <div class="split-row">
+            <span>Publisher Royalty Fee (20%):</span>
+            <span class="highlight-blue" id="sell-modal-publisher-royalty">$0.00</span>
+          </div>
+          <div class="split-policy-note">
+            ⚠️ <strong>ACID Transfer Policy:</strong> Upon purchase, your active license key and attached DLCs are immediately revoked from your library and atomically granted to the buyer. Games currently in an active play session cannot be listed.
+          </div>
+        </div>
+
+        <div class="modal-actions-row">
+          <button type="button" class="btn-cancel" onclick="closeSellModal()">Cancel</button>
+          <button type="button" class="btn-buy" id="btn-submit-listing" onclick="submitP2PListing()">Confirm & List for Resale</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DRM Concurrency Conflict Modal -->
+  <div class="modal-overlay" id="conflict-modal-overlay" onclick="closeConflictModalOnBackdrop(event)">
+    <div class="modal-container modal-small modal-alert" id="conflict-modal-container">
+      <div class="conflict-alert-header">
+        <span class="conflict-icon">⚠️</span>
+        <div>
+          <h2 class="conflict-title">Single-Seat Concurrency Conflict</h2>
+          <p class="conflict-subtitle">GameVault DRM Single-Seat License Enforcement</p>
+        </div>
+      </div>
+
+      <div class="modal-body-simple">
+        <p class="conflict-message" id="conflict-message-text">
+          An active play session for this title is already running on another node under your account.
+        </p>
+
+        <div class="conflict-details-card">
+          <div class="conflict-row">
+            <span class="conflict-label">Current Active Device:</span>
+            <span class="conflict-val highlight-amber" id="conflict-active-device">Laptop-Travel-02</span>
+          </div>
+          <div class="conflict-row">
+            <span class="conflict-label">Session Started At:</span>
+            <span class="conflict-val" id="conflict-started-at">Just now</span>
+          </div>
+          <div class="conflict-row">
+            <span class="conflict-label">Attempting Node:</span>
+            <span class="conflict-val highlight-blue" id="conflict-requesting-device">Desktop-PC-Rig</span>
+          </div>
+        </div>
+
+        <p class="conflict-explanation" id="conflict-explanation-text">
+          Simultaneous gameplay across multiple devices is strictly blocked by GameVault Single-Seat DRM. Please exit the game on that device before launching here.
+        </p>
+
+        <div class="modal-actions-row" style="justify-content: flex-end;">
+          <button type="button" class="btn-cancel" style="background: var(--accent-blue); color: #fff; border: none; font-weight: 700; padding: 0.65rem 1.5rem;" onclick="closeConflictModal()">Dismiss Warning</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="app.js?v=10"></script>
+</body>
+</html>
