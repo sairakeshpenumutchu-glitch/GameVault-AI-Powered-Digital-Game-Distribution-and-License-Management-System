@@ -17,7 +17,10 @@ import os
 from datetime import datetime, timedelta
 import secrets
 
-from database import get_connection, DB_PATH, init_db, reset_and_seed
+try:
+    from database import get_connection, DB_PATH, init_db, reset_and_seed
+except ImportError:
+    from backend.database import get_connection, DB_PATH, init_db, reset_and_seed
 
 app = FastAPI(title="GameVault Core Engine", version="3.0.0")
 
@@ -28,6 +31,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.on_event("startup")
+def startup_event():
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM users LIMIT 1;")
+        conn.close()
+    except Exception:
+        print("[GameVault] Database tables not found. Seeding initial database...")
+        reset_and_seed()
+        print("[GameVault] Database seeded successfully.")
 
 # ----------------- Models -----------------
 class CheckoutRequest(BaseModel):
